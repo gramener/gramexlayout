@@ -35,6 +35,13 @@ pip install build twine
 
 # Release
 
+Update the version number in `setup.py`. Then:
+
+```shell
+git commit -m"Release version x.x.x"
+git push
+```
+
 Release source on PyPI:
 
 ```shell
