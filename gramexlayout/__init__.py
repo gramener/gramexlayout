@@ -7,7 +7,7 @@ import pandas as pd
 __all__ = ['subtotal']
 
 
-def subtotal(data, columns, agg='sum', calc={}, sort_by=None, ascending=True,
+def subtotal(data, columns, agg='sum', calc={}, postcalc={}, sort_by=None, ascending=True,
              total_label='', total_first=True):
     '''
     Aggregates a DataFrame using one or more columns, with subtotal at every level.
@@ -21,9 +21,16 @@ def subtotal(data, columns, agg='sum', calc={}, sort_by=None, ascending=True,
         - a function, e.g. ``np.sum``
         - a dict of column name -> string/function, for different aggregations by column,
           e.g. ``{'column_a': 'mean', 'column_b': 'sum'}``
-    - ``calc``: Used to add new columns. Dict of column name -> function(data) that returns series.
+    - ``calc``: Add new columns (before sorting).
+      Used to create columns you can then sort by.
+      Dict of column name -> function(data) that returns series.
       Same as `DataFrame.assign`_.
       e.g. ``{'price': lambda df: df.sales / df.quantity}``.
+    - ``postcalc``: Add new columns (after sorting).
+      Used to create columns based on the order of the sorted data.
+      Dict of column name -> function(data) that returns series.
+      Same as `DataFrame.assign`_.
+      e.g. ``{'end_position': lambda df: df.sales.cumsum() / df.sales.sum()}``.
     - ``sort_by``: Column name or list of column names to sort by. e.g. ``['Sales', 'Quantity']``
       sorts the first column by ``Sales`` and the second column by ``Quantity``.
     - ``ascending``: Sort ascending or descending. A boolean or list of booleans for each column.
@@ -186,6 +193,21 @@ def subtotal(data, columns, agg='sum', calc={}, sort_by=None, ascending=True,
             Miami     30      6  5.000000
             Omaha     70     13  5.384615
 
+    Add a post-sort calcaulation:
+
+    >>> subtotal(df, ['Country', 'City'], sort_by='Sales', postcalc={
+    ...     'start': lambda df: df.Sales.cumsum().shift(1).fillna(0) / df.Sales.sum(),
+    ...     'end': lambda df: df.Sales.cumsum() / df.Sales.sum() })
+                   Sales  Units     start       end
+    Country City
+                     360     89  0.000000  1.000000
+    US               100     19  0.000000  0.277778
+            Miami     30      6  0.000000  0.083333
+            Omaha     70     13  0.083333  0.277778
+    UK               260     70  0.277778  1.000000
+            Leeds    110     25  0.277778  0.583333
+            Derby    150     45  0.583333  1.000000
+
     Sort Country level by Sales, and City level alphabetically.
 
     >>> subtotal(df, ['Country', 'City'], sort_by=['Sales', 'City'])
@@ -230,6 +252,7 @@ def subtotal(data, columns, agg='sum', calc={}, sort_by=None, ascending=True,
         sort_col = _pick(sort_by, i - 1, None)
         if sort_col is not None:
             total = total.sort_values(sort_col, ascending=_pick(ascending, i - 1, True))
+        total = total.assign(**postcalc)
         result.append(total)
     # Step 4. Reindex based on values
     prev = result[1]

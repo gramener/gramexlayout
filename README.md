@@ -38,13 +38,14 @@ pip install build twine
 Update the version number in `setup.py`. Then:
 
 ```shell
-git commit -m"Release version x.x.x"
+git commit . -m"BLD: Release version x.x.x"
 git push
 ```
 
 Release source on PyPI:
 
 ```shell
+rm -rf dist/
 python -m build --wheel
 twine upload dist/*
 ```
